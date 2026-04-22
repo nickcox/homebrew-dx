@@ -4,19 +4,19 @@ class Cdex < Formula
   license "MIT"
   if OS.mac?
     if Hardware::CPU.arm?
-      url "https://github.com/nickcox/dx/releases/download/v0.1.0/dx-macos-arm64"
-      sha256 "b20ec6498b695699d403a79a31e34e630101ae653e23551ade7015a5c397777f"
+      url "https://github.com/nickcox/dx/releases/download/v0.2.0/dx-macos-arm64"
+      sha256 "68afa49b84537db9b517262895f485299b73c3fafd172868b9d8a6f78f80f838"
     else
-      url "https://github.com/nickcox/dx/releases/download/v0.1.0/dx-macos-x86_64"
-      sha256 "9d7f7f204615fbcaf0300a7bfe1e1d8b4f9c045d0fd1ea942c8684c5b0e0e9d5"
+      url "https://github.com/nickcox/dx/releases/download/v0.2.0/dx-macos-x86_64"
+      sha256 "23e143a7fdf17a7d39360413c56e4b1c7a408e35797efc49ef75f4159703e4c7"
     end
   elsif OS.linux?
     if Hardware::CPU.arm?
-      url "https://github.com/nickcox/dx/releases/download/v0.1.0/dx-linux-arm64"
-      sha256 "047b41836d3adaa7648ffd53da9b69c799f88cc363b5b161416e0af4aeabb153"
+      url "https://github.com/nickcox/dx/releases/download/v0.2.0/dx-linux-arm64"
+      sha256 "0d7e4dbb4f09ce028f412d63be1b037a276d1d46be24efc7564dcee0ab705fb1"
     else
-      url "https://github.com/nickcox/dx/releases/download/v0.1.0/dx-linux-x86_64"
-      sha256 "013c0b3ab819d9e8218c31654876c007a6c95706eeb260a501bdd17801774585"
+      url "https://github.com/nickcox/dx/releases/download/v0.2.0/dx-linux-x86_64"
+      sha256 "aabb61cbceea095b04f6c099223de2490f0e50c7e2c21dc811644fc5fa5cb4cf"
     end
   end
   def install
