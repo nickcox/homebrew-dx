@@ -1,0 +1,163 @@
+on:
+  repository_dispatch:
+    types: [dx-release-published]
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out tap repo
+        uses: actions/checkout@v4
+      - name: Resolve release metadata
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_TAG: ${{ github.event.client_payload.tag || '' }}
+        run: |
+          set -euo pipefail
+          if [ -n "$EVENT_TAG" ]; then
+            echo "Using repository_dispatch tag: $EVENT_TAG"
+            gh api "repos/nickcox/dx/releases/tags/$EVENT_TAG" > release.json
+          else
+            echo "No repository_dispatch tag provided; using latest release"
+            gh api repos/nickcox/dx/releases/latest > release.json
+          fi
+          echo "Resolved release:"
+          jq '{tag_name, name, draft, prerelease, published_at}' release.json
+          echo
+          echo "Resolved assets:"
+          jq -r '.assets[] | "- \(.name) | \(.browser_download_url) | \(.digest // "no-digest")"' release.json
+          tag=$(jq -r '.tag_name' release.json)
+          if [ -z "$tag" ] || [ "$tag" = "null" ]; then
+            echo "failed to resolve release tag" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          get_url() {
+            local name="$1"
+            jq -r --arg name "$name" '.assets[] | select(.name == $name) | .browser_download_url' release.json
+          }
+          get_sha() {
+            local name="$1"
+            jq -r --arg name "$name" '.assets[] | select(.name == $name) | .digest' release.json | sed 's/^sha256://'
+          }
+          linux_x86_64_url=$(get_url "dx-linux-x86_64")
+          linux_arm64_url=$(get_url "dx-linux-arm64")
+          macos_x86_64_url=$(get_url "dx-macos-x86_64")
+          macos_arm64_url=$(get_url "dx-macos-arm64")
+          linux_x86_64_sha=$(get_sha "dx-linux-x86_64")
+          linux_arm64_sha=$(get_sha "dx-linux-arm64")
+          macos_x86_64_sha=$(get_sha "dx-macos-x86_64")
+          macos_arm64_sha=$(get_sha "dx-macos-arm64")
+          for value in \
+            "$linux_x86_64_url" "$linux_arm64_url" "$macos_x86_64_url" "$macos_arm64_url" \
+            "$linux_x86_64_sha" "$linux_arm64_sha" "$macos_x86_64_sha" "$macos_arm64_sha"
+          do
+            if [ -z "$value" ] || [ "$value" = "null" ]; then
+              echo "release metadata incomplete" >&2
+              exit 1
+            fi
+          done
+          echo
+          echo "Selected asset mapping:"
+          echo "  linux_x86_64_url=$linux_x86_64_url"
+          echo "  linux_arm64_url=$linux_arm64_url"
+          echo "  macos_x86_64_url=$macos_x86_64_url"
+          echo "  macos_arm64_url=$macos_arm64_url"
+          echo "  linux_x86_64_sha=$linux_x86_64_sha"
+          echo "  linux_arm64_sha=$linux_arm64_sha"
+          echo "  macos_x86_64_sha=$macos_x86_64_sha"
+          echo "  macos_arm64_sha=$macos_arm64_sha"
+          {
+            echo "linux_x86_64_url=$linux_x86_64_url"
+            echo "linux_arm64_url=$linux_arm64_url"
+            echo "macos_x86_64_url=$macos_x86_64_url"
+            echo "macos_arm64_url=$macos_arm64_url"
+            echo "linux_x86_64_sha=$linux_x86_64_sha"
+            echo "linux_arm64_sha=$linux_arm64_sha"
+            echo "macos_x86_64_sha=$macos_x86_64_sha"
+            echo "macos_arm64_sha=$macos_arm64_sha"
+          } >> "$GITHUB_OUTPUT"
+      - name: Update Formula/cdex.rb
+        id: update_formula
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          LINUX_X86_64_URL: ${{ steps.release.outputs.linux_x86_64_url }}
+          LINUX_ARM64_URL: ${{ steps.release.outputs.linux_arm64_url }}
+          MACOS_X86_64_URL: ${{ steps.release.outputs.macos_x86_64_url }}
+          MACOS_ARM64_URL: ${{ steps.release.outputs.macos_arm64_url }}
+          LINUX_X86_64_SHA: ${{ steps.release.outputs.linux_x86_64_sha }}
+          LINUX_ARM64_SHA: ${{ steps.release.outputs.linux_arm64_sha }}
+          MACOS_X86_64_SHA: ${{ steps.release.outputs.macos_x86_64_sha }}
+          MACOS_ARM64_SHA: ${{ steps.release.outputs.macos_arm64_sha }}
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import os
+          import re
+          p = Path("Formula/cdex.rb")
+          text = p.read_text()
+          replacements = [
+              (
+                  r'(url\s+")https://github\.com/nickcox/dx/releases/download/v[^/]+/dx-macos-arm64(")',
+                  lambda m: f'{m.group(1)}{os.environ["MACOS_ARM64_URL"]}{m.group(2)}',
+              ),
+              (
+                  r'(url\s+")https://github\.com/nickcox/dx/releases/download/v[^/]+/dx-macos-x86_64(")',
+                  lambda m: f'{m.group(1)}{os.environ["MACOS_X86_64_URL"]}{m.group(2)}',
+              ),
+              (
+                  r'(url\s+")https://github\.com/nickcox/dx/releases/download/v[^/]+/dx-linux-arm64(")',
+                  lambda m: f'{m.group(1)}{os.environ["LINUX_ARM64_URL"]}{m.group(2)}',
+              ),
+              (
+                  r'(url\s+")https://github\.com/nickcox/dx/releases/download/v[^/]+/dx-linux-x86_64(")',
+                  lambda m: f'{m.group(1)}{os.environ["LINUX_X86_64_URL"]}{m.group(2)}',
+              ),
+              (
+                  r'(dx-macos-arm64"\s*\n\s*sha256\s*")[^"]+(")',
+                  lambda m: f'{m.group(1)}{os.environ["MACOS_ARM64_SHA"]}{m.group(2)}',
+              ),
+              (
+                  r'(dx-macos-x86_64"\s*\n\s*sha256\s*")[^"]+(")',
+                  lambda m: f'{m.group(1)}{os.environ["MACOS_X86_64_SHA"]}{m.group(2)}',
+              ),
+              (
+                  r'(dx-linux-arm64"\s*\n\s*sha256\s*")[^"]+(")',
+                  lambda m: f'{m.group(1)}{os.environ["LINUX_ARM64_SHA"]}{m.group(2)}',
+              ),
+              (
+                  r'(dx-linux-x86_64"\s*\n\s*sha256\s*")[^"]+(")',
+                  lambda m: f'{m.group(1)}{os.environ["LINUX_X86_64_SHA"]}{m.group(2)}',
+              ),
+          ]
+
+          updated = text
+          for pattern, replacement in replacements:
+              updated = re.sub(pattern, replacement, updated)
+          changed = updated != text
+          if changed:
+              p.write_text(updated)
+              print("Formula updated.")
+          else:
+              print("No formula content changed.")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write(f"changed={'true' if changed else 'false'}\n")
+          PY
+      - name: Open pull request
+        if: steps.update_formula.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: update-cdex-formula-${{ steps.release.outputs.tag }}
+          commit-message: "Update cdex formula to ${{ steps.release.outputs.tag }}"
+          title: "Update cdex formula to ${{ steps.release.outputs.tag }}"
+          body: |
+            ## Summary
+            - update `cdex` to `${{ steps.release.outputs.tag }}`
+            - refresh Linux/macOS binary URLs
+            - refresh sha256 values from the `nickcox/dx` release API digests
+            ## Source
+            - upstream release: `nickcox/dx@${{ steps.release.outputs.tag }}`
