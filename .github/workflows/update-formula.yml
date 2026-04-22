@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out tap repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Resolve release metadata
         id: release
         env:
@@ -20,17 +20,17 @@ jobs:
           set -euo pipefail
           if [ -n "$EVENT_TAG" ]; then
             echo "Using repository_dispatch tag: $EVENT_TAG"
-            gh api "repos/nickcox/dx/releases/tags/$EVENT_TAG" > release.json
+            gh api "repos/nickcox/dx/releases/tags/$EVENT_TAG" > $RUNNER_TEMP/release.json
           else
             echo "No repository_dispatch tag provided; using latest release"
-            gh api repos/nickcox/dx/releases/latest > release.json
+            gh api repos/nickcox/dx/releases/latest > $RUNNER_TEMP/release.json
           fi
           echo "Resolved release:"
-          jq '{tag_name, name, draft, prerelease, published_at}' release.json
+          jq '{tag_name, name, draft, prerelease, published_at}' $RUNNER_TEMP/release.json
           echo
           echo "Resolved assets:"
-          jq -r '.assets[] | "- \(.name) | \(.browser_download_url) | \(.digest // "no-digest")"' release.json
-          tag=$(jq -r '.tag_name' release.json)
+          jq -r '.assets[] | "- \(.name) | \(.browser_download_url) | \(.digest // "no-digest")"' $RUNNER_TEMP/release.json
+          tag=$(jq -r '.tag_name' $RUNNER_TEMP/release.json)
           if [ -z "$tag" ] || [ "$tag" = "null" ]; then
             echo "failed to resolve release tag" >&2
             exit 1
@@ -38,11 +38,11 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           get_url() {
             local name="$1"
-            jq -r --arg name "$name" '.assets[] | select(.name == $name) | .browser_download_url' release.json
+            jq -r --arg name "$name" '.assets[] | select(.name == $name) | .browser_download_url' $RUNNER_TEMP/release.json
           }
           get_sha() {
             local name="$1"
-            jq -r --arg name "$name" '.assets[] | select(.name == $name) | .digest' release.json | sed 's/^sha256://'
+            jq -r --arg name "$name" '.assets[] | select(.name == $name) | .digest' $RUNNER_TEMP/release.json | sed 's/^sha256://'
           }
           linux_x86_64_url=$(get_url "dx-linux-x86_64")
           linux_arm64_url=$(get_url "dx-linux-arm64")
@@ -149,7 +149,7 @@ jobs:
           PY
       - name: Open pull request
         if: steps.update_formula.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: update-cdex-formula-${{ steps.release.outputs.tag }}
           commit-message: "Update cdex formula to ${{ steps.release.outputs.tag }}"
