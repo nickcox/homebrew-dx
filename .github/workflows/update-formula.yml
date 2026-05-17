@@ -37,7 +37,13 @@ jobs:
             echo "failed to resolve release tag" >&2
             exit 1
           fi
+          version=${tag#v}
+          if [ -z "$version" ]; then
+            echo "failed to derive formula version from tag" >&2
+            exit 1
+          fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "url=$url" >> "$GITHUB_OUTPUT"
           get_url() {
             local name="$1"
@@ -88,6 +94,7 @@ jobs:
         id: update_formula
         env:
           TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
           LINUX_X86_64_URL: ${{ steps.release.outputs.linux_x86_64_url }}
           LINUX_ARM64_URL: ${{ steps.release.outputs.linux_arm64_url }}
           MACOS_X86_64_URL: ${{ steps.release.outputs.macos_x86_64_url }}
@@ -104,6 +111,10 @@ jobs:
           p = Path("Formula/cdex.rb")
           text = p.read_text()
           replacements = [
+              (
+                  r'(version\s+")[^"]+(")',
+                  lambda m: f'{m.group(1)}{os.environ["VERSION"]}{m.group(2)}',
+              ),
               (
                   r'(url\s+")https://github\.com/nickcox/dx/releases/download/v[^/]+/dx-macos-arm64(")',
                   lambda m: f'{m.group(1)}{os.environ["MACOS_ARM64_URL"]}{m.group(2)}',

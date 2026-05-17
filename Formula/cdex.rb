@@ -2,6 +2,7 @@ class Cdex < Formula
   desc "Directory navigation CLI/TUI"
   homepage "https://github.com/nickcox/dx"
   license "MIT"
+  version "0.5.0"
   if OS.mac?
     if Hardware::CPU.arm?
       url "https://github.com/nickcox/dx/releases/download/v0.5.0/dx-macos-arm64"
