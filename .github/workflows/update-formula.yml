@@ -1,4 +1,4 @@
-name: Update cdex Formula
+name: Update dx Formula
 on:
   repository_dispatch:
     types: [dx-release-published]
@@ -90,7 +90,7 @@ jobs:
             echo "macos_x86_64_sha=$macos_x86_64_sha"
             echo "macos_arm64_sha=$macos_arm64_sha"
           } >> "$GITHUB_OUTPUT"
-      - name: Update Formula/cdex.rb
+      - name: Update Formula/dx.rb
         id: update_formula
         env:
           TAG: ${{ steps.release.outputs.tag }}
@@ -108,7 +108,7 @@ jobs:
           from pathlib import Path
           import os
           import re
-          p = Path("Formula/cdex.rb")
+          p = Path("Formula/dx.rb")
           text = p.read_text()
           replacements = [
               (
@@ -165,10 +165,10 @@ jobs:
         if: steps.update_formula.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
-          branch: update-cdex-formula-${{ steps.release.outputs.tag }}
-          commit-message: "Update cdex formula to ${{ steps.release.outputs.tag }}"
-          title: "Update cdex formula to ${{ steps.release.outputs.tag }}"
+          branch: update-dx-formula-${{ steps.release.outputs.tag }}
+          commit-message: "Update dx formula to ${{ steps.release.outputs.tag }}"
+          title: "Update dx formula to ${{ steps.release.outputs.tag }}"
           body: |
             ## Summary
-            - update `cdex` to `${{ steps.release.outputs.tag }}`
+            - update `dx` to `${{ steps.release.outputs.tag }}`
             - upstream release: [nickcox/dx@${{ steps.release.outputs.tag }}](${{ steps.release.outputs.url }})
