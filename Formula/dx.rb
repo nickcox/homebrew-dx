@@ -1,23 +1,23 @@
 class Dx < Formula
   desc "Directory navigation CLI/TUI"
   homepage "https://github.com/nickcox/dx"
-  version "0.7.0"
+  version "0.8.0"
   license "MIT"
   if OS.mac?
     if Hardware::CPU.arm?
-      url "https://github.com/nickcox/dx/releases/download/v0.7.0/dx-macos-arm64"
-      sha256 "bb32de736112410882f5e83f93afe903413a37e0c90d63e5b4fa5adb63932a9d"
+      url "https://github.com/nickcox/dx/releases/download/v0.8.0/dx-macos-arm64"
+      sha256 "9be55cef552f1ec95dfca7968edbcd6434e21e2df29fd2527d2bceed763743a4"
     else
-      url "https://github.com/nickcox/dx/releases/download/v0.7.0/dx-macos-x86_64"
-      sha256 "51d0627c044d8f405a1854d326abe1d5f519b5697aeaa2caad524a29109b60b6"
+      url "https://github.com/nickcox/dx/releases/download/v0.8.0/dx-macos-x86_64"
+      sha256 "6d8207d0b906bf3f8dbc75424b2fc6c2310dc5c5bad93368976758e6146c6cd1"
     end
   elsif OS.linux?
     if Hardware::CPU.arm?
-      url "https://github.com/nickcox/dx/releases/download/v0.7.0/dx-linux-arm64"
-      sha256 "53f1b500e60c7b32df2a6b798b2ea3f1db73ebef68847133ff72e9f0935c7940"
+      url "https://github.com/nickcox/dx/releases/download/v0.8.0/dx-linux-arm64"
+      sha256 "46677a106bd24c089514cad14439b18ebec6385160942473766a8c4e2123bebe"
     else
-      url "https://github.com/nickcox/dx/releases/download/v0.7.0/dx-linux-x86_64"
-      sha256 "3971d0c63520f014a46216fa8be5ce1ea47c18568f8212981534285711862f4d"
+      url "https://github.com/nickcox/dx/releases/download/v0.8.0/dx-linux-x86_64"
+      sha256 "795c29b66322812d4bb66b55e8feb2ed994c8a3b14655069041919e7944271ce"
     end
   end
   def install
